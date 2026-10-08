@@ -3,13 +3,24 @@ on:
   push:
     branches: [custom/noads-http]
   workflow_dispatch:
+    inputs:
+      existing_apk_run:
+        description: 'Test QR login using an existing APK artifact; leave empty to build'
+        type: string
+        default: ''
+      existing_apk_sha256:
+        description: 'Expected SHA256 for the existing APK'
+        type: string
+        default: ''
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: personal-apk-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   build:
+    if: ${{ inputs.existing_apk_run == '' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
@@ -121,3 +132,44 @@ jobs:
           name: startup-smoke
           path: startup-smoke
           if-no-files-found: warn
+
+  qr-login-check:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.existing_apk_run != '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Nekogram-noads-http-arm64
+          path: artifacts
+          run-id: ${{ inputs.existing_apk_run }}
+          github-token: ${{ github.token }}
+      - name: Install QR decoder
+        run: |
+          python3 -m venv .qr-check-venv
+          .qr-check-venv/bin/pip install pillow zxing-cpp
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify actual QR login screen
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          NEKO_QR_CHECK_PROXY: ${{ secrets.NEKO_QR_CHECK_PROXY }}
+          EXPECTED_APK_SHA256: ${{ inputs.existing_apk_sha256 }}
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: .qr-check-venv/bin/python Tools/smoke_qr_login.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qr-login-check
+          path: qr-login-check
+          if-no-files-found: warn
+          retention-days: 7
