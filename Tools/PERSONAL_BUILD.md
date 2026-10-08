@@ -1,6 +1,6 @@
 # Personal APK
 
-Branch `custom/noads-http` disables fetching sponsored messages in channels and bot chats and sponsored search results, and stops fetching promoted proxy channels. Ordinary channel posts and bot messages remain visible.
+Branch `custom/noads-http` disables fetching sponsored messages in channels and bot chats and sponsored search results and video overlays, and stops fetching promoted proxy channels. Ordinary channel posts and bot messages remain visible.
 
 Settings → Data and Storage → Proxy Settings → Add Proxy → **HTTP CONNECT** accepts a proxy host, port and optional Basic username/password. HTTP CONNECT is a TCP proxy, distinct from Telegram Web Proxy and HTTPS-to-proxy. Import/export uses the custom `tg://httpproxy?server=HOST&port=PORT&user=USER&pass=PASSWORD` URI supported by this build. The localhost bridge requires a random per-instance password and never falls back to a direct connection.
 

@@ -193,42 +193,11 @@ public static VideoAds make(
     private int requestId;
     private boolean loading, loaded;
     private void load() {
-        if (loading || loaded) return;
-
-        if (UserConfig.getInstance(currentAccount).isPremium() && MessagesController.getInstance(currentAccount).isSponsoredDisabled()) {
-            return;
-        }
-
-        loading = true;
-
-        TLRPC.TL_messages_getSponsoredMessages req = new TLRPC.TL_messages_getSponsoredMessages();
-        req.peer = MessagesController.getInstance(currentAccount).getInputPeer(dialogId);
-        req.flags |= 1;
-        req.msg_id = msg_id;
-        requestId = ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
-            if (!loading) return;
-
-            if (res instanceof TLRPC.TL_messages_sponsoredMessages) {
-                final TLRPC.TL_messages_sponsoredMessages r = (TLRPC.TL_messages_sponsoredMessages) res;
-                MessagesController.getInstance(currentAccount).putUsers(r.users, false);
-                MessagesController.getInstance(currentAccount).putChats(r.chats, false);
-                ads.addAll(r.messages);
-                start_delay = r.start_delay;
-                between_delay = r.between_delay;
-
-                cache.ads.clear();
-                cache.ads.addAll(r.messages);
-                cache.startDelay = r.start_delay;
-                cache.betweenDelay = r.between_delay;
-            }
-
-            cache.loadTime = System.currentTimeMillis();
-            cache.loaded = true;
-            loaded = true;
-            loading = false;
-
-            schedule();
-        }));
+        // Keep the video player active without fetching sponsored overlays.
+        ads.clear();
+        cache.ads.clear();
+        cache.loaded = loaded = true;
+        loading = false;
     }
 
     private void schedule() {
