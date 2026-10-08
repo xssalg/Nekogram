@@ -220,6 +220,9 @@ public class ProxySettingsActivity extends BaseFragment {
                         .setPassword((currentType == ProxySettings.Type.SOCKS5 || currentType == ProxySettings.Type.HTTP) ? inputFields[FIELD_PASSWORD].getText().toString() : "")
                         .setSecret((currentType == ProxySettings.Type.MTPROTO || currentType == ProxySettings.Type.WEB) ? inputFields[FIELD_SECRET].getText().toString() : "")
                         .build();
+                    if (!currentProxyInfo.settings.isValid()) {
+                        return;
+                    }
 
                     SharedPreferences preferences = MessagesController.getGlobalMainSettings();
                     SharedPreferences.Editor editor = preferences.edit();
@@ -292,7 +295,7 @@ public class ProxySettingsActivity extends BaseFragment {
             } else if (a == 2) {
                 typeCell[a].setText(LocaleController.getString(R.string.UseProxyWeb), t == currentType, true);
             } else {
-                typeCell[a].setText("HTTP CONNECT", t == currentType, false);
+                typeCell[a].setText(LocaleController.getString(R.string.UseProxyHttp), t == currentType, false);
             }
             linearLayout2.addView(typeCell[a], LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50));
             typeCell[a].setOnClickListener(typeCellClickListener);
@@ -405,7 +408,7 @@ public class ProxySettingsActivity extends BaseFragment {
             } else {
                 inputFields[a].setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
             }
-            if (a == FIELD_SECRET) {
+            if (a == FIELD_SECRET || a == FIELD_USER) {
                 inputFields[a].addTextChangedListener(new TextWatcher() {
                     @Override
                     public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -760,6 +763,7 @@ public class ProxySettingsActivity extends BaseFragment {
             }
             if (currentType == ProxySettings.Type.SOCKS5 || currentType == ProxySettings.Type.HTTP) {
                 bottomCells[0].setVisibility(View.VISIBLE);
+                bottomCells[0].setText(LocaleController.getString(currentType == ProxySettings.Type.HTTP ? R.string.UseProxyHttpInfo : R.string.UseProxyInfo));
                 bottomCells[1].setVisibility(View.GONE);
                 ((View) inputFields[FIELD_SECRET].getParent()).setVisibility(View.GONE);
                 ((View) inputFields[FIELD_PASSWORD].getParent()).setVisibility(View.VISIBLE);

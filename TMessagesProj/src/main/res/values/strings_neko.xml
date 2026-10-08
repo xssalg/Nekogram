@@ -350,4 +350,6 @@
 
     <!-- Accessibility -->
     <string name="AccessibilitySettings">Accessibility settings</string>
+    <string name="UseProxyHttp">HTTP CONNECT</string>
+    <string name="UseProxyHttpInfo">HTTP CONNECT proxy settings. Username and password are optional (Basic authentication).</string>
 </resources>

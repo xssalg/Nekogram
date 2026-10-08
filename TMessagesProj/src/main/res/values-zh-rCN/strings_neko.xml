@@ -346,4 +346,6 @@
     <string name="InvalidPassQr">通行密钥二维码无效</string>
     <!-- Accessibility -->
     <string name="AccessibilitySettings">无障碍设置</string>
+    <string name="UseProxyHttp">HTTP CONNECT</string>
+    <string name="UseProxyHttpInfo">HTTP CONNECT 代理设置。用户名和密码可选，支持 Basic 认证。</string>
 </resources>

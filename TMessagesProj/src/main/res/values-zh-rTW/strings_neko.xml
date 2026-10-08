@@ -330,4 +330,6 @@
     <string name="JsonCopyValue">複製值</string>
     <!-- Accessibility -->
     <string name="AccessibilitySettings">無障礙設定</string>
+    <string name="UseProxyHttp">HTTP CONNECT</string>
+    <string name="UseProxyHttpInfo">HTTP CONNECT 代理設定。使用者名稱和密碼為選填，支援 Basic 驗證。</string>
 </resources>
