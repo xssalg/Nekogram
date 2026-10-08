@@ -24,7 +24,9 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Test HTTP CONNECT transport
-        run: python3 Tools/test_http_proxy.py
+        run: |
+          python3 Tools/test_http_proxy.py
+          python3 Tools/test_proxy_settings.py
       - name: Free runner disk space
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost

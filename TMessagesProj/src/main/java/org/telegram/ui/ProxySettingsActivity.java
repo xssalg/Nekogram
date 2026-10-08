@@ -533,7 +533,7 @@ public class ProxySettingsActivity extends BaseFragment {
                                 continue;
                             }
                         }
-                        if ((pasteType == ProxySettings.Type.SOCKS5 || pasteType == ProxySettings.Type.HTTP)) {
+                        if (pasteType == ProxySettings.Type.SOCKS5 || pasteType == ProxySettings.Type.HTTP) {
                             if (i == FIELD_PORT || i == FIELD_USER || i == FIELD_PASSWORD) {
                                 continue;
                             }
@@ -707,7 +707,9 @@ public class ProxySettingsActivity extends BaseFragment {
                 ? !TextUtils.isEmpty(WebProxyTransport.normalizeHost(inputFields[FIELD_IP].getText().toString()))
                     && WebProxyTransport.isValidSecret(inputFields[FIELD_SECRET].getText().toString())
                 : inputFields[FIELD_IP].length() != 0
-                    && Utilities.parseInt(inputFields[FIELD_PORT].getText().toString()) != 0;
+                    && Utilities.parseInt(inputFields[FIELD_PORT].getText().toString()) > 0
+                    && Utilities.parseInt(inputFields[FIELD_PORT].getText().toString()) <= 65535
+                    && (currentType != ProxySettings.Type.HTTP || inputFields[FIELD_USER].getText().toString().indexOf(':') < 0);
         setShareDoneEnabled(enabled, animated);
     }
 
