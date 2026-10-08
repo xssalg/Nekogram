@@ -40,16 +40,16 @@ def redact(text):
     return text
 
 
-def adb(*args, binary=False):
-    p = subprocess.run(['adb', *args], capture_output=True, timeout=30)
+def adb(*args, binary=False, timeout=30):
+    p = subprocess.run(['adb', *args], capture_output=True, timeout=timeout)
     if p.returncode:
         raise RuntimeError('adb command failed: ' + redact(p.stderr.decode(errors='replace')))
     return p.stdout if binary else p.stdout.decode(errors='replace')
 
 
-def shell(*args):
+def shell(*args, timeout=30):
     # adb shell concatenates arguments; quote the complete remote command.
-    return adb('shell', shlex.join([str(a) for a in args]))
+    return adb('shell', shlex.join([str(a) for a in args]), timeout=timeout)
 
 
 def hierarchy():
@@ -105,9 +105,9 @@ try:
     result['apk_sha256'] = hashlib.sha256(apk.read_bytes()).hexdigest()
     assert result['apk_sha256'] == os.environ['EXPECTED_APK_SHA256'], 'APK checksum mismatch'
     result['stage'] = 'install_and_start'
-    adb('install', '-r', str(apk))
+    adb('install', '-r', str(apk), timeout=180)
     adb('logcat', '-c')
-    shell('am', 'start', '-W', '-n', COMPONENT)
+    shell('am', 'start', '-W', '-n', COMPONENT, timeout=90)
     tap_label('Start Messaging')
     result['stage'] = 'import_proxy'
     uri = 'tg://httpproxy?' + urllib.parse.urlencode({
