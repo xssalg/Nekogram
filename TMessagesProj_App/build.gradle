@@ -4,8 +4,12 @@ plugins {
     id 'com.android.application'
     id 'androidx.baselineprofile'
     id 'org.telegram.build-app-plugin'
-    id 'com.google.gms.google-services'
+    id 'com.google.gms.google-services' apply false
     id 'io.sentry.android.gradle'
+}
+
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
 }
 
 dependencies {
@@ -15,8 +19,8 @@ dependencies {
 }
 
 sentry {
-    uploadNativeSymbols = true
-    includeSourceContext = true
+    uploadNativeSymbols = !providers.gradleProperty("personalBuild").isPresent()
+    includeSourceContext = !providers.gradleProperty("personalBuild").isPresent()
     additionalSourceDirsForSourceContext = [ '../TMessagesProj/src/main/java' ]
     autoInstallation {
         enabled = false
@@ -81,6 +85,9 @@ android {
         versionName APP_VERSION_NAME
 
         multiDexEnabled true
+        if (providers.gradleProperty("customAbi").isPresent()) {
+            ndk.abiFilters.addAll(providers.gradleProperty("customAbi").get().split(","))
+        }
 
         manifestPlaceholders = [MAPS_API_KEY: localProperties.get("mapsApiKey")]
     }
@@ -94,10 +101,10 @@ android {
     splits.abi {
         var buildingBundle = gradle.startParameter.taskNames.any { it.startsWith("bundle") }
         enable !buildingBundle
-        universalApk true
+        universalApk !providers.gradleProperty("customAbi").isPresent()
 
         reset()
-        include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+        include(*(providers.gradleProperty("customAbi").orNull?.split(",") ?: ["armeabi-v7a", "arm64-v8a", "x86", "x86_64"]))
     }
     namespace 'org.telegram.messenger.regular'
 

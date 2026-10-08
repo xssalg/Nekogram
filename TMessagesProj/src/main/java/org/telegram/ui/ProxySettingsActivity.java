@@ -95,7 +95,7 @@ public class ProxySettingsActivity extends BaseFragment {
     private TextSettingsCell shareCell;
     private TextSettingsCell pasteCell;
     private ActionBarMenuItem doneItem;
-    private RadioCell[] typeCell = new RadioCell[3];
+    private RadioCell[] typeCell = new RadioCell[4];
     private ProxySettings.Type currentType;
 
     private ProxySettings pasteProxySettings;
@@ -216,9 +216,9 @@ public class ProxySettingsActivity extends BaseFragment {
                         .setType(currentType)
                         .setAddress(inputFields[FIELD_IP].getText().toString())
                         .setPort(currentType == ProxySettings.Type.WEB ? 0 : Utilities.parseInt(inputFields[FIELD_PORT].getText().toString()))
-                        .setUser(currentType == ProxySettings.Type.SOCKS5 ? inputFields[FIELD_USER].getText().toString() : "")
-                        .setPassword(currentType == ProxySettings.Type.SOCKS5 ? inputFields[FIELD_PASSWORD].getText().toString() : "")
-                        .setSecret(currentType != ProxySettings.Type.SOCKS5 ? inputFields[FIELD_SECRET].getText().toString() : "")
+                        .setUser((currentType == ProxySettings.Type.SOCKS5 || currentType == ProxySettings.Type.HTTP) ? inputFields[FIELD_USER].getText().toString() : "")
+                        .setPassword((currentType == ProxySettings.Type.SOCKS5 || currentType == ProxySettings.Type.HTTP) ? inputFields[FIELD_PASSWORD].getText().toString() : "")
+                        .setSecret((currentType == ProxySettings.Type.MTPROTO || currentType == ProxySettings.Type.WEB) ? inputFields[FIELD_SECRET].getText().toString() : "")
                         .build();
 
                     SharedPreferences preferences = MessagesController.getGlobalMainSettings();
@@ -279,7 +279,7 @@ public class ProxySettingsActivity extends BaseFragment {
 
         final View.OnClickListener typeCellClickListener = view -> setProxyType(ProxySettings.intToType((Integer) view.getTag()), true);
 
-        for (int a = 0; a < 3; a++) {
+        for (int a = 0; a < typeCell.length; a++) {
             ProxySettings.Type t = ProxySettings.intToType(a);
 
             typeCell[a] = new RadioCell(context);
@@ -289,8 +289,10 @@ public class ProxySettingsActivity extends BaseFragment {
                 typeCell[a].setText(LocaleController.getString(R.string.UseProxySocks5), t == currentType, true);
             } else if (a == 1) {
                 typeCell[a].setText(LocaleController.getString(R.string.UseProxyTelegram), t == currentType, true);
+            } else if (a == 2) {
+                typeCell[a].setText(LocaleController.getString(R.string.UseProxyWeb), t == currentType, true);
             } else {
-                typeCell[a].setText(LocaleController.getString(R.string.UseProxyWeb), t == currentType, false);
+                typeCell[a].setText("HTTP CONNECT", t == currentType, false);
             }
             linearLayout2.addView(typeCell[a], LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50));
             typeCell[a].setOnClickListener(typeCellClickListener);
@@ -483,7 +485,7 @@ public class ProxySettingsActivity extends BaseFragment {
                 final ProxySettings.Type pasteType = pasteProxySettings.getType();
 
                 for (int i = 0; i < inputFields.length; i++) {
-                    if (pasteType == ProxySettings.Type.SOCKS5 && i == FIELD_SECRET) {
+                    if ((pasteType == ProxySettings.Type.SOCKS5 || pasteType == ProxySettings.Type.HTTP) && i == FIELD_SECRET) {
                         continue;
                     }
                     if (pasteType == ProxySettings.Type.MTPROTO && (i == FIELD_USER || i == FIELD_PASSWORD)) {
@@ -531,7 +533,7 @@ public class ProxySettingsActivity extends BaseFragment {
                                 continue;
                             }
                         }
-                        if (pasteType == ProxySettings.Type.SOCKS5) {
+                        if ((pasteType == ProxySettings.Type.SOCKS5 || pasteType == ProxySettings.Type.HTTP)) {
                             if (i == FIELD_PORT || i == FIELD_USER || i == FIELD_PASSWORD) {
                                 continue;
                             }
@@ -577,7 +579,7 @@ public class ProxySettingsActivity extends BaseFragment {
                     }
                     params.append("secret=").append(URLEncoder.encode(secret, "UTF-8"));
                 } else {
-                    url = "https://t.me/socks?";
+                    url = currentType == ProxySettings.Type.HTTP ? "tg://httpproxy?" : "https://t.me/socks?";
                     if (!TextUtils.isEmpty(user)) {
                         if (params.length() != 0) {
                             params.append("&");
@@ -754,7 +756,7 @@ public class ProxySettingsActivity extends BaseFragment {
 
                 TransitionManager.beginDelayedTransition(linearLayout2, transitionSet);
             }
-            if (currentType == ProxySettings.Type.SOCKS5) {
+            if (currentType == ProxySettings.Type.SOCKS5 || currentType == ProxySettings.Type.HTTP) {
                 bottomCells[0].setVisibility(View.VISIBLE);
                 bottomCells[1].setVisibility(View.GONE);
                 ((View) inputFields[FIELD_SECRET].getParent()).setVisibility(View.GONE);
@@ -783,6 +785,7 @@ public class ProxySettingsActivity extends BaseFragment {
             typeCell[0].setChecked(currentType == ProxySettings.Type.SOCKS5, animated);
             typeCell[1].setChecked(currentType == ProxySettings.Type.MTPROTO, animated);
             typeCell[2].setChecked(currentType == ProxySettings.Type.WEB, animated);
+            typeCell[3].setChecked(currentType == ProxySettings.Type.HTTP, animated);
             checkShareDone(animated);
         }
     }

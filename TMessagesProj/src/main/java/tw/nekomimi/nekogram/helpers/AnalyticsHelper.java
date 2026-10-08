@@ -33,7 +33,8 @@ public class AnalyticsHelper {
 
     public static void start(Application application) {
         preferences = application.getSharedPreferences("nekoanalytics", Application.MODE_PRIVATE);
-        analyticsDisabled = !Extra.FORCE_ANALYTICS && preferences.getBoolean("analyticsDisabled", false);
+        analyticsDisabled = com.google.firebase.FirebaseApp.getApps(application).isEmpty()
+                || !Extra.FORCE_ANALYTICS && preferences.getBoolean("analyticsDisabled", false);
         sendBugReport = Extra.FORCE_ANALYTICS || preferences.getBoolean("sendBugReport", true);
         if (analyticsDisabled) {
             FileLog.d("Analytics: userId = disabled");

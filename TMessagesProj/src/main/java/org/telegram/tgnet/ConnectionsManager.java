@@ -43,6 +43,7 @@ import org.telegram.messenger.Utilities;
 import org.telegram.utils.proxy.WebProxyConnectionTester;
 import org.telegram.utils.proxy.WebProxyTransport;
 import org.telegram.utils.proxy.ProxySettings;
+import org.telegram.utils.proxy.HttpProxyTransport;
 import org.telegram.ui.Components.VideoPlayer;
 import org.telegram.ui.LoginActivity;
 
@@ -639,6 +640,8 @@ public class ConnectionsManager extends BaseController {
                 int localPort = WebProxyTransport.start(proxySettings.getAddress(), proxySettings.getSecret());
                 native_setProxySettings(currentAccount, "127.0.0.1", localPort != 0 ? localPort : 9, "", "",
                         proxySettings.getSecret());
+            } else if (proxySettings.getType() == ProxySettings.Type.HTTP) {
+                setHttpProxyForAccount(currentAccount, proxySettings);
             } else {
                 native_setProxySettings(currentAccount, proxySettings.getAddress(), proxySettings.getPort(),
                         proxySettings.getUser(), proxySettings.getPassword(), proxySettings.getSecret());
@@ -752,6 +755,20 @@ public class ConnectionsManager extends BaseController {
             return 0;
         }
 
+        if (settings.getType() == ProxySettings.Type.HTTP) {
+            try {
+                HttpProxyTransport transport = new HttpProxyTransport(settings.getAddress(), settings.getPort(), settings.getUser(), settings.getPassword());
+                long request = native_checkProxy(currentAccount, "127.0.0.1", transport.getPort(), transport.getUser(), transport.getPassword(), "", time -> {
+                    transport.close();
+                    requestTimeDelegate.run(time);
+                });
+                if (request == 0) transport.close();
+                return request;
+            } catch (java.io.IOException e) {
+                requestTimeDelegate.run(-1);
+                return 0;
+            }
+        }
         return native_checkProxy(currentAccount, settings.getAddress(), settings.getPort(), settings.getUser(), settings.getPassword(), settings.getSecret(), requestTimeDelegate);
     }
 
@@ -952,7 +969,21 @@ public class ConnectionsManager extends BaseController {
         KeepAliveJob.startJob();
     }
 
+    private static void setHttpProxyForAccount(int account, ProxySettings settings) {
+        try {
+            HttpProxyTransport transport = HttpProxyTransport.start(settings.getAddress(), settings.getPort(), settings.getUser(), settings.getPassword());
+            native_setProxySettings(account, "127.0.0.1", transport.getPort(), transport.getUser(), transport.getPassword(), "");
+        } catch (java.io.IOException e) {
+            FileLog.e(e);
+            // Fail closed, just as the Web proxy transport does when unavailable.
+            native_setProxySettings(account, "127.0.0.1", 9, "", "", "");
+        }
+    }
+
     public static void setProxySettings(boolean enabled, ProxySettings settings) {
+        if (!enabled || settings == null || settings.getType() != ProxySettings.Type.HTTP || !settings.isValid()) {
+            HttpProxyTransport.stop();
+        }
         String address = "";
         int port = 0;
         String username = "";
@@ -981,7 +1012,11 @@ public class ConnectionsManager extends BaseController {
 
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             if (enabled && settings != null && settings.isValid()) {
-                native_setProxySettings(a, address, port, username, password, secret);
+                if (settings.getType() == ProxySettings.Type.HTTP) {
+                    setHttpProxyForAccount(a, settings);
+                } else {
+                    native_setProxySettings(a, address, port, username, password, secret);
+                }
             } else {
                 native_setProxySettings(a, "", 1080, "", "", "");
             }

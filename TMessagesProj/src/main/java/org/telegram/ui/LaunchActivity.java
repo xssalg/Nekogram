@@ -433,6 +433,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                         String url = uri.toString().toLowerCase();
                         isProxy = url.startsWith("tg:proxy") || url.startsWith("tg://proxy")
                                 || url.startsWith("tg:webproxy") || url.startsWith("tg://webproxy")
+                                || url.startsWith("tg:httpproxy") || url.startsWith("tg://httpproxy")
                                 || url.startsWith("tg:socks") || url.startsWith("tg://socks");
                     }
                 }

@@ -27,7 +27,8 @@ public final class ProxySettings {
     public enum Type {
         SOCKS5,
         MTPROTO,
-        WEB
+        WEB,
+        HTTP
     }
 
     private final @NonNull Type type;
@@ -51,7 +52,7 @@ public final class ProxySettings {
             port = builder.port;
             user = "";
             password = "";
-        } else if (type == Type.SOCKS5) {
+        } else if (type == Type.SOCKS5 || type == Type.HTTP) {
             secret = "";
             port = builder.port;
             user = builder.user;
@@ -96,12 +97,15 @@ public final class ProxySettings {
         }
         return type == Type.WEB
                 ? isValidWebAddress(address) && isValidWebProxySecret(secret)
-                : port > 0;
+                : port > 0 && port <= 65535 && (type != Type.HTTP || user.indexOf(':') < 0);
     }
 
     public String getLink() {
         StringBuilder url;
         switch (type) {
+            case HTTP:
+                url = new StringBuilder("tg://httpproxy?");
+                break;
             case MTPROTO:
                 url = new StringBuilder("https://t.me/proxy?");
                 break;
@@ -186,6 +190,7 @@ public final class ProxySettings {
         editor.putInt("proxy_type", ProxySettings.typeToInt(type));
         editor.putString("proxy_ip", address);
         switch (type) {
+            case HTTP:
             case SOCKS5:
                 editor.putInt("proxy_port", port);
                 editor.remove("proxy_secret");
@@ -256,7 +261,9 @@ public final class ProxySettings {
             } else if (scheme.equalsIgnoreCase("tg")) {
                 String url = uri.toString();
 
-                if (url.startsWith("tg://socks") || url.startsWith("tg:socks")) {
+                if (url.startsWith("tg://httpproxy?") || url.startsWith("tg:httpproxy?")) {
+                    type = Type.HTTP;
+                } else if (url.startsWith("tg://socks") || url.startsWith("tg:socks")) {
                     type = Type.SOCKS5;
                 } else if (url.startsWith("tg://proxy") || url.startsWith("tg:proxy")) {
                     type = Type.MTPROTO;
@@ -523,6 +530,8 @@ public final class ProxySettings {
                 return 1;
             case WEB:
                 return 2;
+            case HTTP:
+                return 3;
         }
         return 0;
     }
@@ -535,6 +544,8 @@ public final class ProxySettings {
                 return Type.MTPROTO;
             case 2:
                 return Type.WEB;
+            case 3:
+                return Type.HTTP;
         }
         return Type.SOCKS5;
     }

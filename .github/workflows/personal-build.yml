@@ -1,0 +1,80 @@
+name: Personal APK - No ads + HTTP proxy
+on:
+  push:
+    branches: [custom/noads-http]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: personal-apk-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: '2'
+      GRADLE_OPTS: '-Dorg.gradle.workers.max=2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Test HTTP CONNECT transport
+        run: python3 Tools/test_http_proxy.py
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+          df -h .
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'build-tools;37.0.0 ndk;27.3.13750724 platforms;android-37.0 cmake;3.22.1'
+      - name: Configure personal build
+        env:
+          KEYSTORE: ${{ secrets.NEKO_CUSTOM_KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.NEKO_CUSTOM_KEYSTORE_PASSWORD }}
+          API_ID: ${{ secrets.API_ID }}
+          API_HASH: ${{ secrets.API_HASH }}
+        run: |
+          python3 - <<'PY'
+          import os, base64, pathlib
+          # Public Telegram Android sample credentials; repository secrets override them.
+          values = {
+              'apiId': os.environ.get('API_ID') or '4',
+              'apiHash': os.environ.get('API_HASH') or '014b35b6184100b085b0d0572f9b5103',
+              'mapsApiKey': '', 'sentryDsn': '', 'helperBotUsername': '',
+              'storeFile': str(pathlib.Path('personal.jks').resolve()),
+              'storePassword': os.environ['KEYSTORE_PASSWORD'],
+              'keyAlias': 'nekogram-personal',
+              'keyPassword': os.environ['KEYSTORE_PASSWORD'],
+          }
+          pathlib.Path('personal.jks').write_bytes(base64.b64decode(os.environ['KEYSTORE']))
+          pathlib.Path('local.properties').write_text(''.join(k+'='+v+'\n' for k,v in values.items()))
+          props = pathlib.Path.home()/'.gradle/gradle.properties'
+          props.parent.mkdir(exist_ok=True)
+          with props.open('a') as f:
+              f.write('\norg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8\norg.gradle.workers.max=2\norg.gradle.parallel=false\nkotlin.daemon.jvmargs=-Xmx2g\n')
+          PY
+      - name: Build signed ARM64 APK
+        run: ./gradlew :TMessagesProj_App:assembleRelease -PpersonalBuild=true -PcustomAbi=arm64-v8a -PAPP_PACKAGE=tw.nekomimi.nekogram.personal -PAPP_VERSION_NAME=12.10.6-noads-http --stacktrace
+      - name: Verify APK signature and checksum
+        run: |
+          for apk in TMessagesProj_App/build/outputs/apk/release/*.apk; do
+            "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --verbose "$apk"
+            sha256sum "$apk" > "$apk.sha256"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nekogram-noads-http-arm64
+          path: |
+            TMessagesProj_App/build/outputs/apk/release/*.apk
+            TMessagesProj_App/build/outputs/apk/release/*.sha256
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove signing material
+        if: always()
+        run: rm -f personal.jks local.properties

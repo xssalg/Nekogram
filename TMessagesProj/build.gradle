@@ -142,6 +142,9 @@ android {
     }
 
     defaultConfig {
+        if (providers.gradleProperty("customAbi").isPresent()) {
+            ndk.abiFilters.addAll(providers.gradleProperty("customAbi").get().split(","))
+        }
         vectorDrawables.generatedDensities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']
 
         externalNativeBuild {
