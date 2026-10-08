@@ -12,6 +12,10 @@ on:
         description: 'Expected SHA256 for the existing APK'
         type: string
         default: ''
+      verify_login:
+        description: 'Verify the new APK generates a real login QR using the temporary test proxy'
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -54,11 +58,16 @@ jobs:
           API_HASH: ${{ secrets.API_HASH }}
         run: |
           python3 - <<'PY'
-          import os, base64, pathlib, subprocess, zlib
-          # Public Telegram Android sample credentials; repository secrets override them.
+          import os, base64, pathlib, subprocess, zlib, re
+          api_id = os.environ.get('API_ID', '').strip()
+          api_hash = os.environ.get('API_HASH', '').strip()
+          if (not re.fullmatch(r'[1-9][0-9]*', api_id) or int(api_id) > 2147483647
+                  or api_id == '4' or not re.fullmatch(r'[0-9a-fA-F]{32}', api_hash)
+                  or api_hash.lower() == '014b35b6184100b085b0d0572f9b5103'):
+              raise SystemExit('Configure your own API_ID and API_HASH repository secrets from my.telegram.org. Public sample credentials are not supported.')
           values = {
-              'apiId': os.environ.get('API_ID') or '4',
-              'apiHash': os.environ.get('API_HASH') or '014b35b6184100b085b0d0572f9b5103',
+              'apiId': api_id,
+              'apiHash': api_hash,
               'mapsApiKey': '', 'sentryDsn': '', 'helperBotUsername': '',
               'storeFile': str(pathlib.Path('personal.jks').resolve()),
               'storePassword': os.environ['KEYSTORE_PASSWORD'],
@@ -78,7 +87,7 @@ jobs:
               f.write('\norg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8\norg.gradle.workers.max=2\norg.gradle.parallel=false\nkotlin.daemon.jvmargs=-Xmx2g\n')
           PY
       - name: Build signed ARM64 APK
-        run: ./gradlew :TMessagesProj_App:assembleRelease -PpersonalBuild=true -PcustomAbi=arm64-v8a -PAPP_PACKAGE=tw.nekomimi.nekogram.personal -PAPP_VERSION_NAME=12.10.6-noads-http-fix1 --stacktrace
+        run: ./gradlew :TMessagesProj_App:assembleRelease -PpersonalBuild=true -PcustomAbi=arm64-v8a -PAPP_PACKAGE=tw.nekomimi.nekogram.personal -PAPP_VERSION_NAME=12.10.6-noads-http-fix2 --stacktrace
       - name: Verify APK signature and checksum
         run: |
           for apk in TMessagesProj_App/build/outputs/apk/release/*.apk; do
@@ -134,7 +143,8 @@ jobs:
           if-no-files-found: warn
 
   qr-login-check:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.existing_apk_run != '' }}
+    needs: build
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && (inputs.existing_apk_run != '' || (inputs.verify_login && needs.build.result == 'success')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -143,7 +153,7 @@ jobs:
         with:
           name: Nekogram-noads-http-arm64
           path: artifacts
-          run-id: ${{ inputs.existing_apk_run }}
+          run-id: ${{ inputs.existing_apk_run || github.run_id }}
           github-token: ${{ github.token }}
       - name: Install QR decoder
         run: |

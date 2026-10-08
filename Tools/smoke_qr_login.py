@@ -103,7 +103,10 @@ try:
     assert len(apks) == 1, 'Expected one signed APK'
     apk = apks[0]
     result['apk_sha256'] = hashlib.sha256(apk.read_bytes()).hexdigest()
-    assert result['apk_sha256'] == os.environ['EXPECTED_APK_SHA256'], 'APK checksum mismatch'
+    expected = os.environ.get('EXPECTED_APK_SHA256', '').strip()
+    if not expected:
+        expected = Path(str(apk) + '.sha256').read_text().split()[0]
+    assert result['apk_sha256'] == expected, 'APK checksum mismatch'
     result['stage'] = 'install_and_start'
     adb('install', '-r', str(apk), timeout=180)
     # The disposable emulator has a virtual SIM. Avoid its first-run autofill
