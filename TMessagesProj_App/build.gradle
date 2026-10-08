@@ -20,6 +20,7 @@ dependencies {
 
 sentry {
     uploadNativeSymbols = !providers.gradleProperty("personalBuild").isPresent()
+    autoUploadProguardMapping = !providers.gradleProperty("personalBuild").isPresent()
     includeSourceContext = !providers.gradleProperty("personalBuild").isPresent()
     additionalSourceDirsForSourceContext = [ '../TMessagesProj/src/main/java' ]
     autoInstallation {
@@ -85,9 +86,6 @@ android {
         versionName APP_VERSION_NAME
 
         multiDexEnabled true
-        if (providers.gradleProperty("customAbi").isPresent()) {
-            ndk.abiFilters.addAll(providers.gradleProperty("customAbi").get().split(","))
-        }
 
         manifestPlaceholders = [MAPS_API_KEY: localProperties.get("mapsApiKey")]
     }
