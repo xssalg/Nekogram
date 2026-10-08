@@ -132,6 +132,11 @@ dependencies {
     implementation 'io.sentry:sentry-android:8.58.0'
 }
 
+Properties nativeSigningProperties = new Properties()
+if (rootProject.file('local.properties').exists()) {
+    nativeSigningProperties.load(rootProject.file('local.properties').newDataInputStream())
+}
+
 android {
     sourceSets.main.jniLibs.srcDirs = ['./jni/']
 
@@ -151,6 +156,14 @@ android {
             cmake {
                 version '3.22.1'
                 arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-23', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+                if (providers.gradleProperty("personalBuild").isPresent()) {
+                    def certHash = nativeSigningProperties.getProperty("nativeCertHash")
+                    def certSize = nativeSigningProperties.getProperty("nativeCertSize")
+                    if (certHash == null || certSize == null) {
+                        throw new GradleException("Personal builds require nativeCertHash and nativeCertSize from the signing certificate")
+                    }
+                    arguments "-DNEKO_PACKAGE_NAME=${APP_PACKAGE}", "-DNEKO_CERT_HASH=${certHash}", "-DNEKO_CERT_SIZE=${certSize}"
+                }
                 targets 'tmessages.49'
                 System.getenv("PATH").split(File.pathSeparator).any { path ->
                     var file = Paths.get("${path}${File.separator}ccache${if (OperatingSystem.current().windows) ".exe" else ""}").toFile()

@@ -7,3 +7,9 @@ Settings → Data and Storage → Proxy Settings → Add Proxy → **HTTP CONNEC
 GitHub Actions builds a signed ARM64 release APK under application ID `tw.nekomimi.nekogram.personal`, which can be installed alongside official Nekogram. The signing key is stored in repository Actions secrets `NEKO_CUSTOM_KEYSTORE` and `NEKO_CUSTOM_KEYSTORE_PASSWORD`; keep it to sign compatible future updates. No Firebase credentials are included, so Firebase push and analytics are unavailable. Telegram's public Android sample API credentials are used unless `API_ID` and `API_HASH` repository secrets are configured. Google Maps requires a separately configured API key.
 
 Run `python3 Tools/test_http_proxy.py` with JDK 21 to test actual socket transport against local proxy fixtures. Device login and a real user-supplied proxy require a device smoke test after installing.
+
+## Startup signature configuration
+
+The native JNI loader verifies the APK signing certificate before registering native functions. Personal builds derive `nativeCertHash` and `nativeCertSize` from their actual signing key and pass those plus the application ID to the native build. Leaving the upstream certificate constants with a personal signing key causes the process to receive SIGKILL during native loading and can leave the launch logo visible.
+
+CI executes the production certificate parser and signature guard on the signed APK. The configured certificate must pass, and a mutated certificate must be rejected. The host fixture changes only descriptor path reporting and records process termination requests. This does not replace an Android device launch test.
