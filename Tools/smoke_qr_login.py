@@ -106,6 +106,10 @@ try:
     assert result['apk_sha256'] == os.environ['EXPECTED_APK_SHA256'], 'APK checksum mismatch'
     result['stage'] = 'install_and_start'
     adb('install', '-r', str(apk), timeout=180)
+    # The disposable emulator has a virtual SIM. Avoid its first-run autofill
+    # permission dialog covering the login menu; no phone number is submitted.
+    for permission in ('READ_PHONE_STATE', 'READ_PHONE_NUMBERS'):
+        shell('pm', 'grant', PACKAGE, 'android.permission.' + permission)
     adb('logcat', '-c')
     shell('am', 'start', '-W', '-n', COMPONENT, timeout=90)
     tap_label('Start Messaging')
