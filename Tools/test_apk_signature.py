@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
  (t/'CMakeLists.txt').write_text('''cmake_minimum_required(VERSION 3.16)
 project(StartupGuard LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
-add_compile_options("SHELL:-include signal.h" "SHELL:-include string_view" "SHELL:-include cstring" -DLOG_DISABLED=)
+add_compile_options("SHELL:-include signal.h" "SHELL:-include string_view" "SHELL:-include cstring" "SHELL:-include cstdint" -DLOG_DISABLED=)
 include_directories("${CMAKE_SOURCE_DIR}")
 include("${NEKO_SOURCE}/TMessagesProj/jni/colorado/CMakeLists.txt")
 add_executable(probe probe.cpp)

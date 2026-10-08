@@ -68,11 +68,6 @@ jobs:
           PY
       - name: Build signed ARM64 APK
         run: ./gradlew :TMessagesProj_App:assembleRelease -PpersonalBuild=true -PcustomAbi=arm64-v8a -PAPP_PACKAGE=tw.nekomimi.nekogram.personal -PAPP_VERSION_NAME=12.10.6-noads-http-fix1 --stacktrace
-      - name: Test native startup signature check
-        run: |
-          for apk in TMessagesProj_App/build/outputs/apk/release/*.apk; do
-            python3 Tools/test_apk_signature.py "$apk" --certificate personal-certificate.der
-          done
       - name: Verify APK signature and checksum
         run: |
           for apk in TMessagesProj_App/build/outputs/apk/release/*.apk; do
@@ -87,6 +82,11 @@ jobs:
             TMessagesProj_App/build/outputs/apk/release/*.sha256
           if-no-files-found: error
           retention-days: 30
+      - name: Test native startup signature check
+        run: |
+          for apk in TMessagesProj_App/build/outputs/apk/release/*.apk; do
+            python3 Tools/test_apk_signature.py "$apk" --certificate personal-certificate.der
+          done
       - name: Remove signing material
         if: always()
         run: rm -f personal.jks local.properties personal-certificate.der

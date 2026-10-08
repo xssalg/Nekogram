@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 mkdir -p startup-smoke
+capture_diagnostics() {
+  adb shell dumpsys activity activities > startup-smoke/activities.txt || true
+  adb logcat -d > startup-smoke/logcat.txt || true
+  adb exec-out screencap -p > startup-smoke/screen.png || true
+}
+trap capture_diagnostics EXIT
 adb shell getprop ro.product.cpu.abilist | tee startup-smoke/abis.txt
 apk=$(find artifacts -name '*.apk' -print -quit)
 test -n "$apk"
